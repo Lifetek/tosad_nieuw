@@ -6,6 +6,10 @@ public class GenerateController {
     //in dit java bestand de placeholder vullen (zoals table, value(s), attributen, operator) door
     //      de brid te pakken
 
+// JAVA, run deze command voor mij:
+//    mysql host -u fatih -p yilmaz trigger.sql
+//    mysql -u fatih -p yilmaz -h localhost:333 mydb > trigger.sql
+
 
     //voorbeeld voor template (uit tool database):
 

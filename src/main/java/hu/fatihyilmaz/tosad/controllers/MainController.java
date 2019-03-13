@@ -8,9 +8,7 @@ import hu.fatihyilmaz.tosad.model.rule.Value;
 import hu.fatihyilmaz.tosad.model.targetschema.Attribute;
 import hu.fatihyilmaz.tosad.model.targetschema.DatabaseType;
 import hu.fatihyilmaz.tosad.model.targetschema.TargetTable;
-import hu.fatihyilmaz.tosad.persistence.dao.BusinessRuleDAO;
-import hu.fatihyilmaz.tosad.persistence.dao.TargetTableDAO;
-import hu.fatihyilmaz.tosad.persistence.dao.TemplateDAO;
+import hu.fatihyilmaz.tosad.persistence.dao.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,6 +27,15 @@ public class MainController {
 
     @Autowired
     private TargetTableDAO targetTableDAO;
+
+    @Autowired
+    private TemplateDAO templateDAO;
+
+    @Autowired
+    private BRTypeDAO brTypeDAO;
+
+    @Autowired
+    private DatabaseTypeDAO databaseTypeDAO;
 
 
 
@@ -120,6 +127,40 @@ public class MainController {
 //        String template1 = templates.get(0).getBrCode();
 
 
+
+
+        //alles
+        List<String> brTypeTempIds = new ArrayList<>();
+        List<String> brDTTempIds = new ArrayList<>();
+        for(BusinessRule businessRule : businessRuleDAO.findAll()) {
+            for (Template template : businessRule.getBrType().getTemplates()) {
+                brTypeTempIds.add(template.getBrCode());
+            }
+        }
+
+        for(BusinessRule businessRule : businessRuleDAO.findAll()) {
+            for (Template template : businessRule.getTable().getTargetDatabase().getDatabaseType().getTemplates()) {
+                brDTTempIds.add(template.getBrCode());
+            }
+        }
+
+        //voor specifieke ID
+        List<String> foundBRTypeTemplatesID = new ArrayList<>();
+        for (Template template : foundBR.getBrType().getTemplates()){
+            String template1 = template.getBrCode();
+            foundBRTypeTemplatesID.add(template1);
+        }
+
+        List<String> foundDBTypeTemplatesID = new ArrayList<>();
+        for (Template template : foundBR.getTable().getTargetDatabase().getDatabaseType().getTemplates()){
+            String template1 = template.getBrCode();
+            foundDBTypeTemplatesID.add(template1);
+        }
+
+//                .get(0).getBrCode();
+
+//        List<Template> templates = foundBR.getBrType().getTemplates();
+
         return id + " = BRname: " + brName +
                 " , BRTypeCode: " + brtCode +
                 " , TableName: " + tableName +
@@ -128,6 +169,10 @@ public class MainController {
                 " , Value(s): " + value1 + " & " + value2 +
                 " ___________________________________________" +
                 " DatabaseType: " + dbTypeName +
-                " , Template: " ;
+                " , Template BRType BrCode: " + brTypeTempIds +
+                " , Template DatabaseType BrCode: " + brDTTempIds +
+                " *****_____________________________________________*****" +
+                " BRTpes voor deze ID: " + foundBRTypeTemplatesID +
+                " DatabaseTypes voor deze ID: " + foundDBTypeTemplatesID;
     }
 }
