@@ -126,16 +126,4 @@ public class BRType {
         }
         return equalObjects;
     }
-
-    @Override
-    public String toString() {
-        return "BRType{" +
-                "brtid=" + brtid +
-                ", name='" + name + '\'' +
-                ", code='" + code + '\'' +
-                ", category=" + category +
-                ", templates=" + templates +
-                ", operators=" + operators +
-                '}';
-    }
 }

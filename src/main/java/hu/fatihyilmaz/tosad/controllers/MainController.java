@@ -7,6 +7,7 @@ import hu.fatihyilmaz.tosad.model.rule.Operator;
 import hu.fatihyilmaz.tosad.model.rule.Value;
 import hu.fatihyilmaz.tosad.model.targetschema.Attribute;
 import hu.fatihyilmaz.tosad.model.targetschema.DatabaseType;
+import hu.fatihyilmaz.tosad.model.targetschema.TargetDatabase;
 import hu.fatihyilmaz.tosad.model.targetschema.TargetTable;
 import hu.fatihyilmaz.tosad.persistence.dao.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +16,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.beans.IntrospectionException;
+import java.io.BufferedReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -37,51 +43,9 @@ public class MainController {
     @Autowired
     private DatabaseTypeDAO databaseTypeDAO;
 
-
-
-//    @RequestMapping("/{id}")
-//    public int index(@PathVariable("id") String id) {
-//        int brid = Integer.parseInt(id);
-//
-////
-////        BusinessRule foundBR = businessRuleDAO.findById(brid).get();
-////
-////        String dbType = foundBR.getTable().getTargetDatabase().getDatabaseType().getName();
-////
-////        List<Template> brTemplates = foundBR.getTable().getTargetDatabase().getDatabaseType().getTemplates();
-////
-////        for(Template template : brTemplates) {
-////            template.setBrCode("codecode");
-////        }
-//
-//
-//        //define
-//        TargetTable targetTable = new TargetTable("my tb3");
-//        TargetTable savedTargetTable = targetTableDAO.save(targetTable);
-//
-//        BusinessRule businessRule = new BusinessRule();
-//        businessRule.setTable(savedTargetTable);
-//        businessRule.setDescription("My descccc3");
-//        businessRule.setName("Oh my god!!!");
-//
-//        BusinessRule savedBusinessRule = businessRuleDAO.save(businessRule);
-//
-//
-//        //   savedBusinessRule.getTable().getTargetDatabase().getDatabaseType().getTemplates()
-//
-////
-////        savedBusinessRule.getTable().getTargetDatabase().getDatabaseType().getName();
-////
-////
-////        businessRuleDAO.findById(1).get().
-//
-//        return brid;
-//    }
-
-
     //stap 1: input BusinessRule ID
     @RequestMapping("/{id}")
-    public String infoBR(@PathVariable("id") String id) {
+    public String infoBR(@PathVariable("id") String id) throws IOException {
         int brid = Integer.parseInt(id);
 
 
@@ -122,46 +86,126 @@ public class MainController {
         DatabaseType dbType = foundBR.getTable().getTargetDatabase().getDatabaseType();
         String dbTypeName = dbType.getName();
 
-    //stap4: Lees Template
-//        List<Template> templates = foundBR.getBrType().getTemplates();
-//        String template1 = templates.get(0).getBrCode();
 
 
+        String templateARNG = "DELIMITER $$ " +
+                "CREATE TRIGGER %s " +
+                "BEFORE INSERT ON %s " +
+                "FOR EACH ROW " +
+                "BEGIN " +
+                "IF NEW.%s %s %s AND %s " +
+                "THEN signal sqlstate '20000' set message_text = 'Insert is denied, not between the requested values';  " +
+                "END IF; " +
+                "END$$ DELIMITER ; ";
+
+        if(foundBR.getBrid() == 1) {
+            saveTemplateBrCode(templateARNG, foundBR.getBrid());
+        }
+
+        for (Integer templateId : getTemplateIdsByBrId(foundBR.getBrid())) {
+            this.generateTemplateARNG(templateId, brid);
+            writeTriggerCode(templateDAO.findById(templateId).get().getBrCode());
+        }
 
 
-        //alles
-        List<String> brTypeTempIds = new ArrayList<>();
-        List<String> brDTTempIds = new ArrayList<>();
-        for(BusinessRule businessRule : businessRuleDAO.findAll()) {
-            for (Template template : businessRule.getBrType().getTemplates()) {
-                brTypeTempIds.add(template.getBrCode());
+        TargetDatabase targetDatabase = new TargetDatabase("root", "yilmaz52", "classicmodels");
+        writeTriggerToTargetDb("trigger.sql", targetDatabase);
+
+
+        return "The template(s) with id "+getTemplateIdsByBrId(foundBR.getBrid())+" are linked to the Business Rule "+foundBR.getBrid()+". The template code has been saved.";
+    }
+
+
+    private List<Integer> getTemplateIdsByBrId(int brid) {
+        List<Integer> foundBRTypeTemplatesIDs = new ArrayList<>();
+
+        for (Template template : businessRuleDAO.findById(brid).get().getBrType().getTemplates()){
+            if (template.getDatabaseType().getDtid() ==  businessRuleDAO.findById(brid).get().getTable().getTargetDatabase().getDatabaseType().getDtid()) {
+                int template1 = template.getTemplateid();
+                foundBRTypeTemplatesIDs.add(template1);
             }
         }
+        return foundBRTypeTemplatesIDs;
+    }
 
-        for(BusinessRule businessRule : businessRuleDAO.findAll()) {
-            for (Template template : businessRule.getTable().getTargetDatabase().getDatabaseType().getTemplates()) {
-                brDTTempIds.add(template.getBrCode());
+
+    private void saveTemplateBrCode(String brCode, int brId) {
+        for (Integer templateId : getTemplateIdsByBrId(brId)) {
+            Template template = templateDAO.findById(templateId).get();
+            template.setBrCode(brCode);
+            templateDAO.save(template);
+        }
+    }
+
+    private void generateTemplateARNG(int templateId, int brId){
+        BusinessRule businessRule = businessRuleDAO.findById(brId).get();
+        Template template = templateDAO.findById(templateId).get();
+
+        String brCodeTemplate = template.getBrCode();
+        String brCode = String.format(brCodeTemplate,
+                businessRule.getName(),
+                businessRule.getTable().getName(),
+                businessRule.getAttributeId1().getName(),
+                businessRule.getOperator().getOperator(),
+                businessRule.getValues().get(0).getValue(),
+                businessRule.getValues().get(1).getValue());
+        template.setBrCode(brCode);
+        templateDAO.save(template);
+    }
+
+
+    private void writeTriggerCode(String triggerCode) throws IOException {
+        FileWriter fileWriter = new FileWriter("trigger.sql");
+        fileWriter.write(triggerCode);
+        fileWriter.close();
+    }
+
+
+    private void writeTriggerToTargetDb(String filename, TargetDatabase targetDatabase) {
+        try {
+            ProcessBuilder builder = new ProcessBuilder("cmd.exe", "/c", "\"C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe\" -u " + targetDatabase.db_user +
+                    " -p"+targetDatabase.db_pass+
+                    " " + targetDatabase.db_db + " < "
+                    + filename);
+
+            builder.redirectErrorStream(true);
+            Process p = builder.start();
+            BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
+            String line;
+            while (true) {
+                line = r.readLine();
+                if (line == null) {
+                    break;
+                }
+                System.out.println(line);
             }
+
+            ProcessBuilder builder1 = new ProcessBuilder("cmd.exe", "/c", "DEL " + filename);
+            builder1.redirectErrorStream(true);
+            Process p1 = builder1.start();
+            BufferedReader r1 = new BufferedReader(new InputStreamReader(p1.getInputStream()));
+            String line1;
+            while (true) {
+                line1 = r1.readLine();
+                if (line1 == null) {
+                    break;
+                }
+                System.out.println(line);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
+    }
+}
 
-        //voor specifieke ID
-        List<String> foundBRTypeTemplatesID = new ArrayList<>();
-        for (Template template : foundBR.getBrType().getTemplates()){
-            String template1 = template.getBrCode();
-            foundBRTypeTemplatesID.add(template1);
-        }
 
-        List<String> foundDBTypeTemplatesID = new ArrayList<>();
-        for (Template template : foundBR.getTable().getTargetDatabase().getDatabaseType().getTemplates()){
-            String template1 = template.getBrCode();
-            foundDBTypeTemplatesID.add(template1);
-        }
 
-//                .get(0).getBrCode();
+/*
 
-//        List<Template> templates = foundBR.getBrType().getTemplates();
 
-        return id + " = BRname: " + brName +
+ EXAMPLE OUTPUT:
+
+ return id + " = BRname: " + brName +
                 " , BRTypeCode: " + brtCode +
                 " , TableName: " + tableName +
                 " , Attribute1Name: " + attribute1Name +
@@ -172,7 +216,7 @@ public class MainController {
                 " , Template BRType BrCode: " + brTypeTempIds +
                 " , Template DatabaseType BrCode: " + brDTTempIds +
                 " *****_____________________________________________*****" +
-                " BRTpes voor deze ID: " + foundBRTypeTemplatesID +
-                " DatabaseTypes voor deze ID: " + foundDBTypeTemplatesID;
-    }
-}
+                " BRTpes voor deze ID: " + foundBRTypeTemplatesIDs +
+                " DatabaseTypes voor deze ID: " + foundBRTypeTemplatesIDs +
+                " ___________ " + myTemplate;*/
+

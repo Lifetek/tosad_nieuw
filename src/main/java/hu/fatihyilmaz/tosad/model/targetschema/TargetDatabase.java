@@ -7,8 +7,6 @@ import java.sql.SQLException;
 
 @Entity
 public class TargetDatabase {
-    //moet dit niet in application.properties?
-    //moet nog een oracle driver in maven dependency?? (Oracle JDBC Driver) ojdbc14.jar?
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -18,19 +16,42 @@ public class TargetDatabase {
     @JoinColumn(name = "databasetype_dtid")
     private DatabaseType databaseType;
 
-    private static TargetDatabase instance = new TargetDatabase();
+    public String db_user;
+    public String db_pass;
+    public String db_db;
 
-    private static final String DB_DRIV = "oracle.jdbc.driver.OracleDriver"; //niet aangepast nog.
-    private static final String DB_URL = "jdbc:oracle:thin:@//DESKTOP-IPA9DH5:1521/xe";
-    private static final String DB_USER = "system";
-    private static final String DB_PASS = "yilmaz";
-    private static Connection conn;
 
     public TargetDatabase() {
     }
 
-    public static TargetDatabase getInstance() {
-        return instance;
+    public TargetDatabase(String db_user, String db_pass, String db_db) {
+        this.db_user = db_user;
+        this.db_pass = db_pass;
+        this.db_db = db_db;
+    }
+
+    public String getDb_user() {
+        return db_user;
+    }
+
+    public void setDb_user(String db_user) {
+        this.db_user = db_user;
+    }
+
+    public String getDb_pass() {
+        return db_pass;
+    }
+
+    public void setDb_pass(String db_pass) {
+        this.db_pass = db_pass;
+    }
+
+    public String getDb_db() {
+        return db_db;
+    }
+
+    public void setDb_db(String db_db) {
+        this.db_db = db_db;
     }
 
     public int getTdid() {
@@ -49,11 +70,4 @@ public class TargetDatabase {
         this.databaseType = databaseType;
     }
 
-    @Override
-    public String toString() {
-        return "TargetDatabase{" +
-                "tdid=" + tdid +
-                ", databaseType=" + databaseType +
-                '}';
-    }
 }

@@ -205,23 +205,4 @@ public class BusinessRule {
         return equalObjects;
     }
 
-    @Override
-    public String toString() {
-        return "BusinessRule{" +
-                "brid=" + brid +
-                ", generatedName='" + generatedName + '\'' +
-                ", description='" + description + '\'' +
-                ", errorMessage='" + errorMessage + '\'' +
-                ", name='" + name + '\'' +
-                ", customCode='" + customCode + '\'' +
-                ", triggerType='" + triggerType + '\'' +
-                ", state='" + state + '\'' +
-                ", brType=" + brType +
-                ", table=" + table +
-                ", operator=" + operator +
-                ", attributeId1=" + attributeId1 +
-                ", attributeId2=" + attributeId2 +
-                ", values=" + values +
-                '}';
-    }
 }
