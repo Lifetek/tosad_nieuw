@@ -1,0 +1,1 @@
+CREATE DEFINER=`root`@`localhost` TRIGGER testBusinessRuleName1 BEFORE INSERT ON products FOR EACH ROW BEGIN IF NEW.quantityInStock NOT BETWEEN 100 AND 9999 THEN signal sqlstate '20000' set message_text = 'Insert is denied, not between the requested values';  END IF; END; 

@@ -21,8 +21,15 @@ import java.io.BufferedReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.io.*;
 
 
 @RestController
@@ -88,15 +95,25 @@ public class MainController {
 
 
 
-        String templateARNG = "DELIMITER $$ " +
-                "CREATE TRIGGER %s " +
+//        String templateARNG = "DELIMITER $$ " +
+//                "CREATE DEFINER=`root`@`localhost` TRIGGER %s " +
+//                "BEFORE INSERT ON %s " +
+//                "FOR EACH ROW " +
+//                "BEGIN " +
+//                "IF NEW.%s %s %s AND %s " +
+//                "THEN signal sqlstate '20000' set message_text = 'Insert is denied, not between the requested values';  " +
+//                "END IF; " +
+//                "END$$ DELIMITER ; ";
+
+        String templateARNG =
+                "CREATE DEFINER=`root`@`localhost` TRIGGER %s " +
                 "BEFORE INSERT ON %s " +
                 "FOR EACH ROW " +
                 "BEGIN " +
                 "IF NEW.%s %s %s AND %s " +
                 "THEN signal sqlstate '20000' set message_text = 'Insert is denied, not between the requested values';  " +
                 "END IF; " +
-                "END$$ DELIMITER ; ";
+                "END; ";
 
         if(foundBR.getBrid() == 1) {
             saveTemplateBrCode(templateARNG, foundBR.getBrid());
@@ -160,41 +177,107 @@ public class MainController {
         fileWriter.close();
     }
 
-
+//"C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -u root -pyilmaz52 classicmodels < mysqlcode.sql
     private void writeTriggerToTargetDb(String filename, TargetDatabase targetDatabase) {
         try {
-            ProcessBuilder builder = new ProcessBuilder("cmd.exe", "/c", "\"C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe\" -u " + targetDatabase.db_user +
-                    " -p"+targetDatabase.db_pass+
-                    " " + targetDatabase.db_db + " < "
-                    + filename);
-
-            builder.redirectErrorStream(true);
-            Process p = builder.start();
-            BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
-            String line;
-            while (true) {
-                line = r.readLine();
-                if (line == null) {
-                    break;
-                }
-                System.out.println(line);
-            }
-
-            ProcessBuilder builder1 = new ProcessBuilder("cmd.exe", "/c", "DEL " + filename);
-            builder1.redirectErrorStream(true);
-            Process p1 = builder1.start();
-            BufferedReader r1 = new BufferedReader(new InputStreamReader(p1.getInputStream()));
-            String line1;
-            while (true) {
-                line1 = r1.readLine();
-                if (line1 == null) {
-                    break;
-                }
-                System.out.println(line);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
+            Class.forName("com.mysql.jdbc.Driver");
+            Connection con = DriverManager.getConnection("jdbc:mysql://localhost:3306/"+targetDatabase.db_db, targetDatabase.db_user, targetDatabase.db_pass);
+            Statement stmt = con.createStatement();
+            String content = new String(Files.readAllBytes(Paths.get(filename)), "UTF-8");
+            stmt.executeUpdate(content);
+        } catch (Exception e) {
+            System.out.println(e);
         }
+
+//        Connection con = DriverManager.getConnection("jdbc:mysql://localhost:3306/?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC"+targetDatabase.db_db, targetDatabase.db_user, targetDatabase.db_pass);
+
+
+
+
+            //
+//            Runtime.getRuntime().exec("\"C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe\" -u " + targetDatabase.db_user +
+//                    " -p"+targetDatabase.db_pass+
+//                    " " + targetDatabase.db_db + " < "
+//                    + filename);
+//            System.exit(0);
+//        }
+//        catch (IOException e) {
+//            System.out.println("exception happened - here's what I know: ");
+//            e.printStackTrace();
+//            System.exit(-1);
+//        }
+//        try {
+//            Runtime.getRuntime().exec("DEL " + filename);
+//            System.exit(0);
+//        }
+//        catch (IOException e) {
+//            System.out.println("exception happened - here's what I know: ");
+//            e.printStackTrace();
+//            System.exit(-1);
+//        }
+
+
+
+
+
+            //            Runtime.getRuntime().exec("cmd.exe /c \"C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe\" -u " + targetDatabase.db_user +
+//                    " -p"+targetDatabase.db_pass+
+//                    " " + targetDatabase.db_db + " < "
+//                    + filename);
+//            System.exit(0);
+//        }
+//        catch (IOException e) {
+//            System.out.println("exception happened - here's what I know: ");
+//            e.printStackTrace();
+//            System.exit(-1);
+//        }
+//        try {
+//            Runtime.getRuntime().exec("cmd.exe /c DEL " + filename);
+//            System.exit(0);
+//        }
+//        catch (IOException e) {
+//            System.out.println("exception happened - here's what I know: ");
+//            e.printStackTrace();
+//            System.exit(-1);
+//        }
+
+
+
+
+
+//            ProcessBuilder builder = new ProcessBuilder("cmd.exe", "/c", "\"C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe\" -u " + targetDatabase.db_user +
+//                    " -p"+targetDatabase.db_pass+
+//                    " " + targetDatabase.db_db + " < "
+//                    + filename);
+//
+//            builder.redirectErrorStream(true);
+//            Process p = builder.start();
+//            BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
+//            String line;
+//            while (true) {
+//                line = r.readLine();
+//                if (line == null) {
+//                    break;
+//                }
+//                System.out.println(line);
+//            }
+//
+//            //delete file gelijk erna.
+//            ProcessBuilder builder1 = new ProcessBuilder("cmd.exe", "/c", "DEL " + filename);
+//            builder1.redirectErrorStream(true);
+//            Process p1 = builder1.start();
+//            BufferedReader r1 = new BufferedReader(new InputStreamReader(p1.getInputStream()));
+//            String line1;
+//            while (true) {
+//                line1 = r1.readLine();
+//                if (line1 == null) {
+//                    break;
+//                }
+//                System.out.println(line);
+//            }
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
     }
 }
 
