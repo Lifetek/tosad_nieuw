@@ -1,1 +1,1 @@
-CREATE DEFINER=`root`@`localhost` TRIGGER testBusinessRuleName1 BEFORE INSERT ON products FOR EACH ROW BEGIN IF NEW.quantityInStock NOT BETWEEN 100 AND 9999 THEN signal sqlstate '20000' set message_text = 'Insert is denied, not between the requested values';  END IF; END; 
+CREATE DEFINER=`root`@`localhost` TRIGGER testBusinessRuleName2 BEFORE INSERT ON products FOR EACH ROW BEGIN IF NEW.buyPrice > 100 THEN signal sqlstate '20000' set message_text = '(trigger_ACMP) Insert is denied, see trigger!';  END IF; END; 

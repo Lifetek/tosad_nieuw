@@ -25,11 +25,9 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
-import java.io.*;
 
 
 @RestController
@@ -39,22 +37,13 @@ public class MainController {
     private BusinessRuleDAO businessRuleDAO;
 
     @Autowired
-    private TargetTableDAO targetTableDAO;
-
-    @Autowired
     private TemplateDAO templateDAO;
 
-    @Autowired
-    private BRTypeDAO brTypeDAO;
-
-    @Autowired
-    private DatabaseTypeDAO databaseTypeDAO;
 
     //stap 1: input BusinessRule ID
     @RequestMapping("/{id}")
     public String infoBR(@PathVariable("id") String id) throws IOException {
         int brid = Integer.parseInt(id);
-
 
 
     //stap 2: Lees BusinessRule met geralateerde objecten uit tooldb
@@ -93,38 +82,49 @@ public class MainController {
         DatabaseType dbType = foundBR.getTable().getTargetDatabase().getDatabaseType();
         String dbTypeName = dbType.getName();
 
-
-
-//        String templateARNG = "DELIMITER $$ " +
-//                "CREATE DEFINER=`root`@`localhost` TRIGGER %s " +
-//                "BEFORE INSERT ON %s " +
-//                "FOR EACH ROW " +
-//                "BEGIN " +
-//                "IF NEW.%s %s %s AND %s " +
-//                "THEN signal sqlstate '20000' set message_text = 'Insert is denied, not between the requested values';  " +
-//                "END IF; " +
-//                "END$$ DELIMITER ; ";
-
+    //Attribute Range Rule Template:
         String templateARNG =
                 "CREATE DEFINER=`root`@`localhost` TRIGGER %s " +
                 "BEFORE INSERT ON %s " +
                 "FOR EACH ROW " +
                 "BEGIN " +
                 "IF NEW.%s %s %s AND %s " +
-                "THEN signal sqlstate '20000' set message_text = 'Insert is denied, not between the requested values';  " +
+                "THEN signal sqlstate '20000' set message_text = '(triggerARNG) Insert is denied, not between the requested values';  " +
                 "END IF; " +
                 "END; ";
 
+    //Attribute Compare Rule Template:
+        String templateACMP =
+                "CREATE DEFINER=`root`@`localhost` TRIGGER %s " +
+                "BEFORE INSERT ON %s " +
+                "FOR EACH ROW " +
+                "BEGIN " +
+                "IF NEW.%s %s %s " +
+                "THEN signal sqlstate '20000' set message_text = '(trigger_ACMP) Insert is denied, see trigger!';  " +
+                "END IF; " +
+                "END; ";
+
+        //nog een switch statement maken eventueel..
+        //miss beter om ipv getBrid de get.brtypeName te pakken (ARNG, ACMP enz)
         if(foundBR.getBrid() == 1) {
+            //in toolDB met placeholders zetten
             saveTemplateBrCode(templateARNG, foundBR.getBrid());
+
+            //voor de juiste template de placeholder vullen en dit naar een bestand schrijven
+            for (Integer templateId : getTemplateIdsByBrId(foundBR.getBrid())) {
+                this.generateTemplateARNG(templateId, brid);
+                writeTriggerCode(templateDAO.findById(templateId).get().getBrCode());
+            }
+        } else if (foundBR.getBrid() == 2){
+            saveTemplateBrCode(templateACMP,foundBR.getBrid());
+
+            for (Integer templateId : getTemplateIdsByBrId(foundBR.getBrid())) {
+                this.generateTemplateACMP(templateId, brid);
+                writeTriggerCode(templateDAO.findById(templateId).get().getBrCode());
+            }
         }
 
-        for (Integer templateId : getTemplateIdsByBrId(foundBR.getBrid())) {
-            this.generateTemplateARNG(templateId, brid);
-            writeTriggerCode(templateDAO.findById(templateId).get().getBrCode());
-        }
-
-
+        //TargetDB object aanmaken met username, password en db - daarna trigger.sql bestand naar deze DB zetten
         TargetDatabase targetDatabase = new TargetDatabase("root", "yilmaz52", "classicmodels");
         writeTriggerToTargetDb("trigger.sql", targetDatabase);
 
@@ -170,6 +170,21 @@ public class MainController {
         templateDAO.save(template);
     }
 
+    private void generateTemplateACMP(int templateId, int brId){
+        BusinessRule businessRule = businessRuleDAO.findById(brId).get();
+        Template template = templateDAO.findById(templateId).get();
+
+        String brCodeTemplate = template.getBrCode();
+        String brCode = String.format(brCodeTemplate,
+                businessRule.getName(),
+                businessRule.getTable().getName(),
+                businessRule.getAttributeId1().getName(),
+                businessRule.getOperator().getOperator(),
+                businessRule.getValues().get(0).getValue());
+        template.setBrCode(brCode);
+        templateDAO.save(template);
+    }
+
 
     private void writeTriggerCode(String triggerCode) throws IOException {
         FileWriter fileWriter = new FileWriter("trigger.sql");
@@ -177,7 +192,7 @@ public class MainController {
         fileWriter.close();
     }
 
-//"C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -u root -pyilmaz52 classicmodels < mysqlcode.sql
+
     private void writeTriggerToTargetDb(String filename, TargetDatabase targetDatabase) {
         try {
             Class.forName("com.mysql.jdbc.Driver");
@@ -189,104 +204,25 @@ public class MainController {
             System.out.println(e);
         }
 
-//        Connection con = DriverManager.getConnection("jdbc:mysql://localhost:3306/?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC"+targetDatabase.db_db, targetDatabase.db_user, targetDatabase.db_pass);
-
-
-
-
-            //
-//            Runtime.getRuntime().exec("\"C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe\" -u " + targetDatabase.db_user +
-//                    " -p"+targetDatabase.db_pass+
-//                    " " + targetDatabase.db_db + " < "
-//                    + filename);
-//            System.exit(0);
-//        }
-//        catch (IOException e) {
-//            System.out.println("exception happened - here's what I know: ");
-//            e.printStackTrace();
-//            System.exit(-1);
-//        }
-//        try {
-//            Runtime.getRuntime().exec("DEL " + filename);
-//            System.exit(0);
-//        }
-//        catch (IOException e) {
-//            System.out.println("exception happened - here's what I know: ");
-//            e.printStackTrace();
-//            System.exit(-1);
-//        }
-
-
-
-
-
-            //            Runtime.getRuntime().exec("cmd.exe /c \"C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe\" -u " + targetDatabase.db_user +
-//                    " -p"+targetDatabase.db_pass+
-//                    " " + targetDatabase.db_db + " < "
-//                    + filename);
-//            System.exit(0);
-//        }
-//        catch (IOException e) {
-//            System.out.println("exception happened - here's what I know: ");
-//            e.printStackTrace();
-//            System.exit(-1);
-//        }
-//        try {
-//            Runtime.getRuntime().exec("cmd.exe /c DEL " + filename);
-//            System.exit(0);
-//        }
-//        catch (IOException e) {
-//            System.out.println("exception happened - here's what I know: ");
-//            e.printStackTrace();
-//            System.exit(-1);
-//        }
-
-
-
-
-
-//            ProcessBuilder builder = new ProcessBuilder("cmd.exe", "/c", "\"C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe\" -u " + targetDatabase.db_user +
-//                    " -p"+targetDatabase.db_pass+
-//                    " " + targetDatabase.db_db + " < "
-//                    + filename);
-//
-//            builder.redirectErrorStream(true);
-//            Process p = builder.start();
-//            BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
-//            String line;
-//            while (true) {
-//                line = r.readLine();
-//                if (line == null) {
-//                    break;
-//                }
-//                System.out.println(line);
-//            }
-//
-//            //delete file gelijk erna.
-//            ProcessBuilder builder1 = new ProcessBuilder("cmd.exe", "/c", "DEL " + filename);
-//            builder1.redirectErrorStream(true);
-//            Process p1 = builder1.start();
-//            BufferedReader r1 = new BufferedReader(new InputStreamReader(p1.getInputStream()));
-//            String line1;
-//            while (true) {
-//                line1 = r1.readLine();
-//                if (line1 == null) {
-//                    break;
-//                }
-//                System.out.println(line);
-//            }
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
     }
 }
 
+//voorbeeld voor trigger in template:
+
+//          create or replace trigger [triggernaam]
+//          before ...
+//          on [tabelnaam]
+//          for each row
+//          begin
+//(ARNG)    ... [attribuut1] [operator] [value1] AND [value2]
+
+//(ACMP)    ... [attribuut1] [operator] [value1]
+//          END
 
 
-/*
 
 
- EXAMPLE OUTPUT:
+/* voorbeeld URL outputT:
 
  return id + " = BRname: " + brName +
                 " , BRTypeCode: " + brtCode +
@@ -303,3 +239,6 @@ public class MainController {
                 " DatabaseTypes voor deze ID: " + foundBRTypeTemplatesIDs +
                 " ___________ " + myTemplate;*/
 
+
+//Ook geprobeerd via CMD:
+//"C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -u root -pyilmaz52 classicmodels < mysqlcode.sql
