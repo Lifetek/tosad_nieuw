@@ -6,8 +6,6 @@ import java.util.List;
 
 @Entity
 public class Operator {
-    //many to many met BRType
-
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private int operatorid;
@@ -15,7 +13,7 @@ public class Operator {
     private String operator;
 
     @ManyToMany(fetch = FetchType.LAZY,
-    mappedBy = "operators")
+    mappedBy = "operators") //=BRType
 
     private List<BRType> brTypes = new ArrayList<BRType>();
 

@@ -13,14 +13,11 @@ import hu.fatihyilmaz.tosad.persistence.dao.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.beans.IntrospectionException;
-import java.io.BufferedReader;
+
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.sql.Connection;
@@ -39,12 +36,10 @@ public class MainController {
     @Autowired
     private TemplateDAO templateDAO;
 
-
     //stap 1: input BusinessRule ID
     @RequestMapping("/{id}")
     public String infoBR(@PathVariable("id") String id) throws IOException {
         int brid = Integer.parseInt(id);
-
 
     //stap 2: Lees BusinessRule met geralateerde objecten uit tooldb
         //BusinessRule Object:
@@ -104,8 +99,8 @@ public class MainController {
                 "END IF; " +
                 "END; ";
 
-        //nog een switch statement maken eventueel..
         //miss beter om ipv getBrid de get.brtypeName te pakken (ARNG, ACMP enz)
+        //ook kan ik later eventueel een factory maken (design pattern) als er meer business rules zullen zijn, voor nu zo gelaten.
         if(foundBR.getBrid() == 1) {
             //in toolDB met placeholders zetten
             saveTemplateBrCode(templateARNG, foundBR.getBrid());
@@ -129,7 +124,7 @@ public class MainController {
         writeTriggerToTargetDb("trigger.sql", targetDatabase);
 
 
-        return "The template(s) with id "+getTemplateIdsByBrId(foundBR.getBrid())+" are linked to the Business Rule "+foundBR.getBrid()+". The template code has been saved.";
+        return "The template(s) with id "+getTemplateIdsByBrId(foundBR.getBrid())+" are linked to the Business Rule "+foundBR.getBrid()+". The template code has been saved to the ToolDB and the trigger is deployed to the TargetDB.";
     }
 
 
@@ -220,25 +215,5 @@ public class MainController {
 //          END
 
 
-
-
-/* voorbeeld URL outputT:
-
- return id + " = BRname: " + brName +
-                " , BRTypeCode: " + brtCode +
-                " , TableName: " + tableName +
-                " , Attribute1Name: " + attribute1Name +
-                " , Operator: " + operatorName +
-                " , Value(s): " + value1 + " & " + value2 +
-                " ___________________________________________" +
-                " DatabaseType: " + dbTypeName +
-                " , Template BRType BrCode: " + brTypeTempIds +
-                " , Template DatabaseType BrCode: " + brDTTempIds +
-                " *****_____________________________________________*****" +
-                " BRTpes voor deze ID: " + foundBRTypeTemplatesIDs +
-                " DatabaseTypes voor deze ID: " + foundBRTypeTemplatesIDs +
-                " ___________ " + myTemplate;*/
-
-
-//Ook geprobeerd via CMD:
+//Kon ook via CMD:
 //"C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -u root -pyilmaz52 classicmodels < mysqlcode.sql

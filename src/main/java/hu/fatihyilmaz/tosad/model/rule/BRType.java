@@ -8,8 +8,6 @@ import java.util.List;
 
 @Entity
 public class BRType {
-    //one to many met template
-
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private int brtid;

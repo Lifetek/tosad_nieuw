@@ -9,7 +9,6 @@ import java.util.List;
 
 @Entity
 public class BusinessRule {
-
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private int brid;

@@ -7,7 +7,6 @@ import javax.persistence.*;
 
 @Entity
 public class Template {
-
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private int templateid;

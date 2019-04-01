@@ -7,7 +7,6 @@ import java.sql.SQLException;
 
 @Entity
 public class TargetDatabase {
-
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private int tdid;
@@ -19,7 +18,6 @@ public class TargetDatabase {
     public String db_user;
     public String db_pass;
     public String db_db;
-
 
     public TargetDatabase() {
     }

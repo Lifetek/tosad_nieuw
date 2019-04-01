@@ -8,8 +8,6 @@ import java.util.List;
 
 @Entity
 public class TargetTable {
-    //one to many met businessrule (bi directioneel)
-
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private int tableid;
